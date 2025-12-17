@@ -1,1 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Object Detection</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  #container {
+    position: relative;
+  }
+  video {
+    width: 90vw;
+    max-width: 640px;
+    border-radius: 12px;
+  }
+  canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+</style>
+</head>
+
+<body>
+<div id="container">
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+</div>
+
+<!-- TensorFlow.js -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.12.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let model;
+
+// Start camera
+async function startCamera() {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: false
+  });
+  video.srcObject = stream;
+
+  video.onloadedmetadata = () => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    detectFrame();
+  };
+}
+
+// Load model
+async function loadModel() {
+  model = await cocoSsd.load();
+  console.log("Model loaded");
+}
+
+// Detect objects
+async function detectFrame() {
+  const predictions = await model.detect(video);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  predictions.forEach(pred => {
+    if (pred.score > 0.6) {
+      const [x, y, width, height] = pred.bbox;
+
+      ctx.strokeStyle = "#00FF00";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, width, height);
+
+      ctx.fillStyle = "#00FF00";
+      ctx.font = "16px Arial";
+      ctx.fillText(
+        `${pred.class} (${Math.round(pred.score * 100)}%)`,
+        x,
+        y > 10 ? y - 5 : 10
+      );
+    }
+  });
+
+  requestAnimationFrame(detectFrame);
+}
+
+// Init
+(async function init() {
+  await loadModel();
+  await startCamera();
+})();
+</script>
+</body>
+</html>
 
