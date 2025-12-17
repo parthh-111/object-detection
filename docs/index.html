@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Object Detection</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    #container {
+      position: relative;
+    }
+    video {
+      width: 90vw;
+      max-width: 640px;
+      border-radius: 12px;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <!-- TensorFlow -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.12.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    let model;
+
+    async function startCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false
+      });
+      video.srcObject = stream;
+
+      return new Promise(resolve => {
+        video.onloadedmetadata = () => resolve();
+      });
+    }
+
+    async function loadModel() {
+      model = await cocoSsd.load();
+      detect();
+    }
+
+    async function detect() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const predictions = await model.detect(video);
+
+      predictions.forEach(p => {
+        ctx.strokeStyle = "#00ff00";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(...p.bbox);
+
+        ctx.fillStyle = "#00ff00";
+        ctx.font = "16px Arial";
+        ctx.fillText(
+          `${p.class} (${Math.round(p.score * 100)}%)`,
+          p.bbox[0],
+          p.bbox[1] - 5
+        );
+      });
+
+      requestAnimationFrame(detect);
+    }
+
+    async function init() {
+      await startCamera();
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      await loadModel();
+    }
+
+    init();
+  </script>
+</body>
+</html>
